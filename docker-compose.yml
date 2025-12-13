@@ -60,8 +60,11 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
       # ---- MySQL (RDS) ----
-      SPRING_DATASOURCE_URL: jdbc:mysql://database-1.cd6022qiadpx.us-east-1.rds.amazonaws.com:3306/crypto_platform?useSSL=false&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: Ll20010101
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+
+    volumes:
+      - ./logs:/app/logs
 
     restart: unless-stopped

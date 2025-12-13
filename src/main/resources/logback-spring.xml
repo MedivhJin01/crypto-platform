@@ -1,15 +1,14 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
 <configuration>
 
+    <!-- Log directory (default: /app/logs) -->
+    <property name="LOG_DIR" value="${LOG_DIR:-/app/logs}"/>
 
     <!-- INFO/DEBUG/WARN log file -->
     <appender name="INFO_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/crypto-platform.log</file>
+        <file>${LOG_DIR}/crypto-platform.log</file>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!-- Daily rotation -->
-            <fileNamePattern>logs/crypto-platform.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>${LOG_DIR}/crypto-platform.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>7</maxHistory>
         </rollingPolicy>
 
@@ -17,7 +16,6 @@
             <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n</pattern>
         </encoder>
 
-        <!-- Only log levels < ERROR -->
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>
             <onMatch>DENY</onMatch>
@@ -27,11 +25,10 @@
 
     <!-- ERROR log file -->
     <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/crypto-platform-error.log</file>
+        <file>${LOG_DIR}/crypto-platform-error.log</file>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!-- Daily rotation -->
-            <fileNamePattern>logs/crypto-platform-error.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>${LOG_DIR}/crypto-platform-error.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>
         </rollingPolicy>
 
