@@ -1,7 +1,7 @@
 <configuration>
 
     <!-- Log directory (default: /app/logs) -->
-    <property name="LOG_DIR" value="${LOG_DIR:-/app/logs}"/>
+    <property name="LOG_DIR" value="${LOG_DIR:-logs}"/>
 
     <!-- INFO/DEBUG/WARN log file -->
     <appender name="INFO_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
