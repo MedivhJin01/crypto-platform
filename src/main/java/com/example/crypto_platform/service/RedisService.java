@@ -1,0 +1,13 @@
+package com.example.crypto_platform.service;
+
+import com.example.crypto_platform.dto.CsParam;
+import com.example.crypto_platform.model.Candlestick;
+
+import java.util.List;
+
+public interface RedisService {
+    void saveLatestCs(Candlestick candlestick);
+    Candlestick getLatestCs(Long marketId, Long intervalMs, Long openTime);
+    void saveAggCss(CsParam csParam, List<Candlestick> candlesticks);
+    List<Candlestick> getAggCss(CsParam csParam);
+}

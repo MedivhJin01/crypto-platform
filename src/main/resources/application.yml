@@ -1,0 +1,72 @@
+spring:
+  profiles:
+    active: local
+
+  application:
+    name: crypto-platform
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+  data:
+    redis:
+      database: ${REDIS_DB:0}
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      lettuce:
+        pool:
+          max-active: ${REDIS_POOL_MAX_ACTIVE:8}
+          max-idle: ${REDIS_POOL_MAX_IDLE:8}
+          max-wait: ${REDIS_POOL_MAX_WAIT:-1ms}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+
+# --- MyBatis ---
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+  mapper-locations: classpath*:mapper/*.xml
+  type-aliases-package: com.example.crypto_platform.model
+
+# --- App ---
+app:
+  kafka:
+    cs-batch-topic: ${CS_BATCH_TOPIC:cs-batch-raw}
+  exchanges: ${APP_EXCHANGES:BINANCE,OKX,CRYPTO,BYBIT}
+  symbols: ${APP_SYMBOLS:BTC-USDT,ETH-USDT}
+
+# --- Logging ---
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:ERROR}
+#    org.springframework.boot.context.properties: DEBUG
+#    org.springframework.boot.autoconfigure.jdbc: DEBUG
+
+# --- Exchanges Config ---
+exchanges:
+  exchange-props:
+    BINANCE:
+      base-url: https://api.binance.com
+      path: /api/v3/klines
+
+    OKX:
+      base-url: https://www.okx.com
+      path: /api/v5/market/history-candles
+
+    CRYPTO:
+      base-url: https://api.crypto.com
+      path: /exchange/v1/public/get-candlestick
+
+    BYBIT:
+      base-url: https://api.bybit.com
+      path: /v5/market/kline
+
