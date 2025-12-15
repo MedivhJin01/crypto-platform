@@ -10,7 +10,6 @@ import com.example.crypto_platform.service.MarketDataService;
 import com.example.crypto_platform.validation.CsRequestValidation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -58,62 +57,135 @@ public class CsFetchScheduler {
         );
     }
 
+
+    private List<CompletableFuture<Void>> scheduleExchanges (List<String> exchanges, long baseInterval, long currentTime, long backFillTime) {
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        for (String exchange : exchanges) {
+            futures.addAll(scheduleSymbolsForExchange(exchange, marketConfig.getSymbols(), baseInterval, currentTime, backFillTime));
+        }
+        return futures;
+    }
+
+    private List<CompletableFuture<Void>> scheduleSymbolsForExchange (String exchange, List<String> symbols, long baseInterval, long currentTime, long backFillTime) {
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        for (String symbol : symbols) {
+            futures.add(schedulePostCsJobAsync(exchange, symbol, baseInterval, currentTime, backFillTime));
+        }
+        return futures;
+    }
+
+    private CompletableFuture<Void> schedulePostCsJobAsync (String exchange, String symbol, long baseInterval, long currentTime, long backFillTime) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                postCsJob(exchange, symbol, baseInterval, currentTime, backFillTime);
+            } catch (Exception e) {
+                log.error("Error scheduling fetch for {}/{}", exchange, symbol, e);
+            }
+        }, fetchExecutor);
+    }
+
+    private void postCsJob (String exchange, String symbol, long baseInterval, long currentTime, long backFillTime) {
+        Long marketId = marketDataService.getMarketId(exchange, symbol);
+        Long lastCloseTime = (marketId == null)
+                ? null
+                : marketDataService.getLastCsCloseTime(marketId, baseInterval);
+        long endTime = currentTime - 1L;
+        long startTime;
+
+        if (lastCloseTime == null) {
+            startTime = currentTime - backFillTime;
+            log.info("Backfill for {}/{} (marketId={}): startTime={}, endTime={}",
+                    exchange, symbol, marketId, startTime, currentTime - 1L);
+        } else {
+            startTime = lastCloseTime + 1L;
+            log.info("Fetch for {}/{} (marketId={}): startTime={}, endTime={}",
+                    exchange, symbol, marketId, startTime, currentTime - 1L);
+        }
+
+        if (startTime > endTime) {
+            log.info("No new data for {}/{} (marketId={})", exchange, symbol, marketId);
+            return;
+        }
+
+        CsRequest csRequest = new CsRequest(exchange, symbol, "1m", startTime, endTime);
+        CsParam csParam = csRequestValidation.validateCsRequest(csRequest);
+
+        String lockKey = buildLockKey(csParam);
+        lockService.executeWithLock(lockKey, 500, 55_000, () -> {
+            log.info("Acquired lock {} for {}/{} window [{} - {}]",
+                    lockKey, exchange, symbol, startTime, endTime);
+            csProducer.produce(csParam);
+            return null;
+        });
+    }
+
     @Scheduled(cron = "0 * * * * *")
     public void postCs() {
         long baseInterval = intervalParseService.toMillis("1m");
         long currentTime = (System.currentTimeMillis() / baseInterval) * baseInterval;
 
         long backfillTime = intervalParseService.toMillis("1d");
-
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (String exchange : marketConfig.getExchanges()) {
-            for (String symbol : marketConfig.getSymbols()) {
-                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                    try {
-                        Long marketId = marketDataService.getMarketId(exchange, symbol);
-                        Long lastCloseTime = (marketId == null)
-                                ? null
-                                : marketDataService.getLastCsCloseTime(marketId, baseInterval);
-                        long startTime;
-                        if (lastCloseTime == null) {
-                            startTime = currentTime - backfillTime;
-                            log.info("Backfill for {}/{} (marketId={}): startTime={}, endTime={}",
-                                    exchange, symbol, marketId, startTime, currentTime - 1L);
-                        } else {
-                            startTime = lastCloseTime + 1L;
-                            log.info("Fetch for {}/{} (marketId={}): startTime={}, endTime={}",
-                                    exchange, symbol, marketId, startTime, currentTime - 1L);
-                        }
-
-                        long endTime = currentTime - 1L;
-                        if (startTime > endTime) {
-                            log.info("No new data for {}/{} (marketId={})", exchange, symbol, marketId);
-                            return;
-                        }
-
-                        CsRequest csRequest = new CsRequest(
-                                exchange,
-                                symbol,
-                                "1m",
-                                startTime,
-                                endTime
-                        );
-                        CsParam csParam = csRequestValidation.validateCsRequest(csRequest);
-                        String lockKey = buildLockKey(csParam);
-                        lockService.executeWithLock(lockKey, 500, 55_000, () -> {
-                            log.info("Acquired lock {} for {}/{} window [{} - {}]",
-                                    lockKey, exchange, symbol, startTime, endTime);
-                            csProducer.produce(csParam);
-                            return null;
-                        });
-                    } catch (Exception e) {
-                        log.error("Error scheduling fetch for {}/{}", exchange, symbol, e);
-                    }
-                }, fetchExecutor);
-                futures.add(future);
-            }
-        }
+        List<CompletableFuture<Void>> futures = scheduleExchanges(marketConfig.getExchanges(), baseInterval, currentTime, backfillTime);
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
+//
+//    @Scheduled(cron = "0 * * * * *")
+//    public void postCs() {
+//        long baseInterval = intervalParseService.toMillis("1m");
+//        long currentTime = (System.currentTimeMillis() / baseInterval) * baseInterval;
+//
+//        long backfillTime = intervalParseService.toMillis("1d");
+//
+//
+//        List<CompletableFuture<Void>> futures = new ArrayList<>();
+//        for (String exchange : marketConfig.getExchanges()) {
+//            for (String symbol : marketConfig.getSymbols()) {
+//                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+//                    try {
+//                        Long marketId = marketDataService.getMarketId(exchange, symbol);
+//                        Long lastCloseTime = (marketId == null)
+//                                ? null
+//                                : marketDataService.getLastCsCloseTime(marketId, baseInterval);
+//                        long startTime;
+//                        if (lastCloseTime == null) {
+//                            startTime = currentTime - backfillTime;
+//                            log.info("Backfill for {}/{} (marketId={}): startTime={}, endTime={}",
+//                                    exchange, symbol, marketId, startTime, currentTime - 1L);
+//                        } else {
+//                            startTime = lastCloseTime + 1L;
+//                            log.info("Fetch for {}/{} (marketId={}): startTime={}, endTime={}",
+//                                    exchange, symbol, marketId, startTime, currentTime - 1L);
+//                        }
+//
+//                        long endTime = currentTime - 1L;
+//                        if (startTime > endTime) {
+//                            log.info("No new data for {}/{} (marketId={})", exchange, symbol, marketId);
+//                            return;
+//                        }
+//
+//                        CsRequest csRequest = new CsRequest(
+//                                exchange,
+//                                symbol,
+//                                "1m",
+//                                startTime,
+//                                endTime
+//                        );
+//                        CsParam csParam = csRequestValidation.validateCsRequest(csRequest);
+//                        String lockKey = buildLockKey(csParam);
+//                        lockService.executeWithLock(lockKey, 500, 55_000, () -> {
+//                            log.info("Acquired lock {} for {}/{} window [{} - {}]",
+//                                    lockKey, exchange, symbol, startTime, endTime);
+//                            csProducer.produce(csParam);
+//                            return null;
+//                        });
+//                    } catch (Exception e) {
+//                        log.error("Error scheduling fetch for {}/{}", exchange, symbol, e);
+//                    }
+//                }, fetchExecutor);
+//                futures.add(future);
+//            }
+//        }
+//        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+//    }
 
 }
