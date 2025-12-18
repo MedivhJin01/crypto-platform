@@ -1,9 +1,9 @@
 spring:
-  profiles:
-    active: local
-
   application:
     name: crypto-platform
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
 
   jackson:
     serialization:
@@ -19,11 +19,14 @@ spring:
           max-active: ${REDIS_POOL_MAX_ACTIVE:8}
           max-idle: ${REDIS_POOL_MAX_IDLE:8}
           max-wait: ${REDIS_POOL_MAX_WAIT:-1ms}
+    mongodb:
+      uri: ${MONGODB_URI}
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
   datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
@@ -41,8 +44,31 @@ mybatis:
 app:
   kafka:
     cs-batch-topic: ${CS_BATCH_TOPIC:cs-batch-raw}
+
+  mongodb:
+    database: crypto_news
+
+
   exchanges: ${APP_EXCHANGES:BINANCE,OKX,CRYPTO,BYBIT}
-  symbols: ${APP_SYMBOLS:BTC-USDT,ETH-USDT}
+  symbols: ${APP_SYMBOLS:BTC-USDT}
+
+# --- AI ---
+ai:
+  news:
+    tavily:
+      api-key: ${TAVILY_API_KEY}
+      search-depth: "advanced"
+      include-raw-content: false
+    gemini:
+      api-key: ${GEMINI_API_KEY}
+    embedding:
+      model: gemini-embedding-001
+      dimension: 3072
+      collection: news_history_embeddings
+      index: embedding
+      max-result-ratio: 5
+
+
 
 # --- Logging ---
 logging:

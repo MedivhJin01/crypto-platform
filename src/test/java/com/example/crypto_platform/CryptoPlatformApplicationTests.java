@@ -1,16 +1,15 @@
 package com.example.crypto_platform;
 
-import com.example.crypto_platform.dto.CsParam;
-import com.example.crypto_platform.dto.CsRequest;
-import com.example.crypto_platform.mapper.MarketDataMapper;
-import com.example.crypto_platform.service.CsFetchService;
-import com.example.crypto_platform.service.IntervalParseService;
-import com.example.crypto_platform.validation.CsRequestValidation;
+import com.example.crypto_platform.backend.dto.CsParam;
+import com.example.crypto_platform.backend.dto.CsRequest;
+import com.example.crypto_platform.backend.mapper.MarketDataMapper;
+import com.example.crypto_platform.backend.service.CsFetchService;
+import com.example.crypto_platform.backend.service.IntervalParseService;
+import com.example.crypto_platform.backend.validation.CsRequestValidation;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
