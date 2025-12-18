@@ -13,6 +13,7 @@ import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.data.document.Document;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -23,15 +24,12 @@ import java.util.List;
 @Service
 public class NewsIngestionServiceImpl implements NewsIngestionService {
 
-    private final NewsHistoryRepository newsHistoryRepository;
-    private final EmbeddingModel embeddingModel;
-    private final EmbeddingStore<TextSegment> embeddingStore;
-
-    public NewsIngestionServiceImpl(NewsHistoryRepository newsHistoryRepository, EmbeddingModel embeddingModel, EmbeddingStore<TextSegment> embeddingStore) {
-        this.newsHistoryRepository = newsHistoryRepository;
-        this.embeddingModel = embeddingModel;
-        this.embeddingStore = embeddingStore;
-    }
+    @Autowired
+    private NewsHistoryRepository newsHistoryRepository;
+    @Autowired
+    private EmbeddingModel embeddingModel;
+    @Autowired
+    private EmbeddingStore<TextSegment> embeddingStore;
 
     private static final int MAX_TOKENS = 256;
     private static final int OVERLAP_TOKENS = 32;

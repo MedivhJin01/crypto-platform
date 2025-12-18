@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.web.search.WebSearchEngine;
 import dev.langchain4j.web.search.WebSearchRequest;
 import dev.langchain4j.web.search.WebSearchResults;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -18,13 +19,8 @@ import java.util.List;
 @Service
 public class NewsSearchServiceImpl implements NewsSearchService {
 
-    private final WebSearchEngine webSearchEngine;
-    private final ObjectMapper objectMapper;
-
-    public NewsSearchServiceImpl(WebSearchEngine webSearchEngine, ObjectMapper objectMapper) {
-        this.webSearchEngine = webSearchEngine;
-        this.objectMapper = objectMapper;
-    }
+    @Autowired
+    private WebSearchEngine webSearchEngine;
 
     private String buildQuery(String symbol, LocalDate startDate, LocalDate endDate, boolean direction) {
         String base = symbol.split("-")[0];
