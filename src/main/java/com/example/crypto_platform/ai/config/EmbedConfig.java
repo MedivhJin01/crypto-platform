@@ -3,14 +3,12 @@ package com.example.crypto_platform.ai.config;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.model.CreateCollectionOptions;
-import com.mongodb.internal.connection.IndexMap;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.googleai.GoogleAiEmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.mongodb.IndexMapping;
 import dev.langchain4j.store.embedding.mongodb.MongoDbEmbeddingStore;
-import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,7 +38,7 @@ public class EmbedConfig {
     @Bean
     public EmbeddingStore<TextSegment> embeddingStore(
             MongoClient mongoClient,
-            @Value("${app.mongodb.database}") String databaseName,
+            @Value("${spring.data.mongodb.database}") String databaseName,
             @Value("${ai.news.embedding.collection}") String collectionName,
             @Value("${ai.news.embedding.index}") String indexName,
             @Value("${ai.news.embedding.dimension}") int dimension,

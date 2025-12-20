@@ -32,7 +32,7 @@ public class NewsIngestionServiceImpl implements NewsIngestionService {
     private EmbeddingStore<TextSegment> embeddingStore;
 
     private static final int MAX_TOKENS = 256;
-    private static final int OVERLAP_TOKENS = 32;
+    private static final int OVERLAP_TOKENS = 16;
 
     private Document toDocument(NewsHistory newsHistory) {
         String text = newsHistory.getTitle() + "\n\n" + newsHistory.getContent();

@@ -1,4 +1,4 @@
-package com.example.crypto_platform;
+package com.example.crypto_platform.backend;
 
 import com.example.crypto_platform.backend.dto.CsParam;
 import com.example.crypto_platform.backend.dto.CsRequest;
@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-class CryptoPlatformApplicationTests {
+class CryptoPlatformBackendTests {
 
     @Autowired
     private MarketDataMapper marketDataMapper;
