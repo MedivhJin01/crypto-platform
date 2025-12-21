@@ -29,20 +29,6 @@ public class NewsSearchServiceImpl implements NewsSearchService {
     private static final Pattern MULTI_SPACES = Pattern.compile("[ \\t\\f\\v]+");
     private static final Pattern MULTI_NEWLINES = Pattern.compile("\\n{2,}");
 
-
-    private String buildQuery(String symbol, LocalDate startDate, LocalDate endDate, boolean direction) {
-        String base = symbol.split("-")[0];
-        String moveWord = direction ? "surge" : "drop";
-        String dateRange = String.format("%s .. %s",
-                startDate.format(DateTimeFormatter.ISO_DATE),
-                endDate.format(DateTimeFormatter.ISO_DATE));
-
-        return String.format(
-                "Reasons why %s %s on %s",
-                base, moveWord, dateRange
-        );
-    }
-
     private String cleanNewsContent(String content) {
         if (content == null || content.isEmpty()) {
             return "";
@@ -74,15 +60,26 @@ public class NewsSearchServiceImpl implements NewsSearchService {
                 .toList();
     }
 
-    @Override
-    public TavilyResponse searchNews(MarketEvent marketEvent) {
+    private String buildQuery(MarketEvent marketEvent) {
         Instant start = Instant.ofEpochMilli(marketEvent.getStartTime());
         Instant end = Instant.ofEpochMilli(marketEvent.getEndTime());
 
         LocalDate startDate = start.atZone(ZoneOffset.UTC).toLocalDate();
         LocalDate endDate = end.atZone(ZoneOffset.UTC).toLocalDate();
+        String base = marketEvent.getSymbol().split("-")[0];
+        String moveWord = marketEvent.isDirection() ? "rally" : "selloff";
+        String dateRange = String.format("%s .. %s",
+                startDate.format(DateTimeFormatter.ISO_DATE),
+                endDate.format(DateTimeFormatter.ISO_DATE));
+        return String.format(
+                "Reasons why %s %s on %s",
+                base, moveWord, dateRange
+        );
+    }
 
-        String query = buildQuery(marketEvent.getSymbol(), startDate, endDate, marketEvent.isDirection());
+    @Override
+    public TavilyResponse searchNews(MarketEvent marketEvent) {
+        String query = buildQuery(marketEvent);
 
         WebSearchRequest request = WebSearchRequest.builder()
                 .searchTerms(query)
