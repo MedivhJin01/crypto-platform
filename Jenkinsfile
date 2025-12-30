@@ -51,9 +51,10 @@ pipeline {
           sh """
             ssh -o StrictHostKeyChecking=no ec2-user@${EC2_HOST} '
               cd ${EC2_DIR} &&
+              test -f .env || (echo "ERROR: ${EC2_DIR}/.env missing" && exit 1) &&
+              test -f target/${JAR_NAME} || (echo "ERROR: jar missing" && exit 1) &&
               docker compose down &&
-              docker build -t crypto-app:latest . &&
-              docker compose up -d &&
+              docker compose up -d --build &&
               docker compose ps
             '
           """
