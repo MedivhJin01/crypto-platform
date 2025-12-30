@@ -45,7 +45,8 @@ app:
     cs-batch-topic: ${CS_BATCH_TOPIC:cs-batch-raw}
 
 
-  exchanges: ${APP_EXCHANGES:BINANCE,OKX,CRYPTO,BYBIT}
+#  exchanges: ${APP_EXCHANGES:BINANCE,OKX,CRYPTO,BYBIT}
+  exchanges: ${APP_EXCHANGES:BINANCE}
   symbols: ${APP_SYMBOLS:BTC-USDT}
 
 # --- AI ---
