@@ -44,6 +44,7 @@ services:
     restart: unless-stopped
 
   app:
+    build: .
     image: crypto-app:latest
     container_name: crypto-app
     depends_on:

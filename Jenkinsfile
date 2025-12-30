@@ -7,7 +7,7 @@ pipeline {
 
   environment {
     EC2_HOST = "98.84.97.49"
-    EC2_DIR  = "/home/ec2-user/crypto-platform"
+    EC2_DIR  = "/opt/crypto-platform"
     JAR_NAME = "crypto-platform-0.0.1-SNAPSHOT.jar"
   }
 
