@@ -27,12 +27,12 @@ class CryptoPlatformBackendTests {
     @Autowired
     private CsFetchService csFetchService;
 
-//    @Test
-//    void cleanDb() {
-//        // ensure a clean state for every test
-//        marketDataMapper.deleteAll();
-//        assertThat(marketDataMapper.countAll()).isZero();
-//    }
+    @Test
+    void cleanDb() {
+        // ensure a clean state for every test
+        marketDataMapper.deleteAll();
+        assertThat(marketDataMapper.countAll()).isZero();
+    }
 
 
 //    @Test
