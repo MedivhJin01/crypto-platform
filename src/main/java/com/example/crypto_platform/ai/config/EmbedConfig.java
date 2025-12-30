@@ -44,7 +44,6 @@ public class EmbedConfig {
             @Value("${ai.news.embedding.dimension}") int dimension,
             @Value("${ai.news.embedding.max-result-ratio}") long maxResultRatio
     ) {
-        CreateCollectionOptions createCollectionOptions = new CreateCollectionOptions();
         IndexMapping indexMapping = IndexMapping.builder()
                 .dimension(dimension)
                 .metadataFieldNames(Set.of("symbol", "date"))

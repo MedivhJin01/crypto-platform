@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class LLMConfig {
-    // Olama
+    // Ollama
     @Bean
     public ChatModel chatModelGemini(@Value("${ai.news.gemini.api-key}") String apiKey) {
         return GoogleAiGeminiChatModel.builder()

@@ -2,8 +2,6 @@ spring:
   application:
     name: crypto-platform
 
-#  profiles:
-#    active: ${SPRING_PROFILES_ACTIVE:local}
 
   jackson:
     serialization:

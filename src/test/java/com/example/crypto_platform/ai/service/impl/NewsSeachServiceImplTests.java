@@ -65,20 +65,19 @@ public class NewsSeachServiceImplTests {
         WebSearchRequest request = captor.getValue();
         assertThat(response.getQuery()).isNotBlank();
         assertThat(response.getQuery())
+                .contains("Reasons")
                 .contains("BTC")
-                .contains("drop")
-                .contains("reason")
-                .contains("date:");
+                .contains("selloff");
 
         assertThat(response.getResults()).hasSize(2);
 
         assertThat(response.getResults().get(0).getTitle()).isEqualTo("Title 1");
         assertThat(response.getResults().get(0).getUrl()).isEqualTo("https://example.com/1");
-        assertThat(response.getResults().get(0).getContent()).isEqualTo("Some content 1");
+        assertThat(response.getResults().get(0).getContent()).isEqualTo("Some snippet 1");
 
         assertThat(response.getResults().get(1).getTitle()).isEqualTo("Title 2");
         assertThat(response.getResults().get(1).getUrl()).isEqualTo("https://example.com/2");
-        assertThat(response.getResults().get(1).getContent()).isEqualTo("Some content 2");
+        assertThat(response.getResults().get(1).getContent()).isEqualTo("Some snippet 2");
     }
 
     @Test
