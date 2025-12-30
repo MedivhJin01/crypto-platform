@@ -65,7 +65,7 @@ public class NewsIngestionServiceImpl implements NewsIngestionService {
         tavilyResponse.getResults().stream()
                 .parallel()
                 .filter(r -> r.getUrl() != null)
-                .filter(r -> r.getTitle() != null || r.getContent() != null)
+                .filter(r -> r.getTitle() != null && r.getContent() != null)
                 .forEach(result -> {
                     NewsHistory newsHistory = newsHistoryRepository.save(
                             NewsHistory.builder()

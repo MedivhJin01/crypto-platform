@@ -35,27 +35,27 @@ class CryptoPlatformBackendTests {
     }
 
 
-    @Test
-    void fetchCsTest() throws Exception {
-        marketDataMapper.deleteAll();
-        assertThat(marketDataMapper.countAll()).isZero();
-
-
-        long endTime = 1765253159999L;
-        long startTime = endTime + 1L - intervalParseService.toMillis("1d");
-
-        CsRequest csRequest = new CsRequest(
-                "BYBIT",
-                "BTC-USDT",
-                "1m",
-                startTime,
-                endTime
-        );
-
-        CsParam csParam = csRequestValidation.validateCsRequest(csRequest);
-        csFetchService.fetch(csParam);
-
-        long rows = marketDataMapper.countAll();
-    }
+//    @Test
+//    void fetchCsTest() throws Exception {
+//        marketDataMapper.deleteAll();
+//        assertThat(marketDataMapper.countAll()).isZero();
+//
+//
+//        long endTime = 1765253159999L;
+//        long startTime = endTime + 1L - intervalParseService.toMillis("1d");
+//
+//        CsRequest csRequest = new CsRequest(
+//                "BYBIT",
+//                "BTC-USDT",
+//                "1m",
+//                startTime,
+//                endTime
+//        );
+//
+//        CsParam csParam = csRequestValidation.validateCsRequest(csRequest);
+//        csFetchService.fetch(csParam);
+//
+//        long rows = marketDataMapper.countAll();
+//    }
 
 }

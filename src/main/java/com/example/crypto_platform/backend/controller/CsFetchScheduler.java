@@ -57,7 +57,6 @@ public class CsFetchScheduler {
         );
     }
 
-
     private List<CompletableFuture<Void>> scheduleExchanges (List<String> exchanges, long baseInterval, long currentTime, long backFillTime) {
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         for (String exchange : exchanges) {
