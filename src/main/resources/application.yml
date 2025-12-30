@@ -46,7 +46,7 @@ app:
 
 
 #  exchanges: ${APP_EXCHANGES:BINANCE,OKX,CRYPTO,BYBIT}
-  exchanges: ${APP_EXCHANGES:BINANCE}
+  exchanges: ${APP_EXCHANGES:BINANCE, OKX}
   symbols: ${APP_SYMBOLS:BTC-USDT}
 
 # --- AI ---
@@ -78,7 +78,7 @@ logging:
 exchanges:
   exchange-props:
     BINANCE:
-      base-url: https://api.binance.com
+      base-url: https://api.binance.us
       path: /api/v3/klines
 
     OKX:
