@@ -1,6 +1,10 @@
 pipeline {
   agent any
 
+  tools {
+    maven 'maven3'
+  }
+
   environment {
     EC2_HOST = "98.84.97.49"
     EC2_DIR  = "/home/ec2-user/crypto-platform"
@@ -8,6 +12,14 @@ pipeline {
   }
 
   stages {
+    stage('Check tools') {
+      steps {
+        sh 'which mvn || true'
+        sh 'mvn -v || true'
+        sh 'java -version || true'
+      }
+    }
+
     stage('Checkout') {
       steps {
         checkout scm
