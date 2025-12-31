@@ -19,4 +19,19 @@ public class Candlestick {
     private BigDecimal closePrice;
 
     private BigDecimal volume;
+
+
+    public static Candlestick empty(Long marketId, Long klineInterval) {
+        return new Candlestick(
+                marketId,
+                klineInterval,
+                null,
+                null,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO
+        );
+    }
 }

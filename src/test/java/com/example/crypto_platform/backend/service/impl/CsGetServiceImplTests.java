@@ -191,8 +191,8 @@ class CsGetServiceImplTests {
                 BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE
         );
 
-        when(redisService.getLatestCs(eq(1L), eq(intervalMs), anyLong())).thenReturn(c0);
-        when(redisService.getLatestCs(eq(2L), eq(intervalMs), anyLong())).thenReturn(c1);
+        when(redisService.getLatestCs(eq(1L), eq(intervalMs))).thenReturn(c0);
+        when(redisService.getLatestCs(eq(2L), eq(intervalMs))).thenReturn(c1);
 
         Map<String, Candlestick> result = csGetService.getLatestCss(symbol, intervalMs);
 
@@ -203,8 +203,8 @@ class CsGetServiceImplTests {
 
 
         verify(marketDataService, times(1)).getMarketsBySymbol(symbol);
-        verify(redisService, times(1)).getLatestCs(eq(1L), eq(intervalMs), anyLong());
-        verify(redisService, times(1)).getLatestCs(eq(2L), eq(intervalMs), anyLong());
+        verify(redisService, times(1)).getLatestCs(eq(1L), eq(intervalMs));
+        verify(redisService, times(1)).getLatestCs(eq(2L), eq(intervalMs));
     }
 
 

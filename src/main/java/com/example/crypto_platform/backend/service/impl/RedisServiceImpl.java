@@ -39,7 +39,7 @@ public class RedisServiceImpl implements RedisService {
     }
 
     @Override
-    public Candlestick getLatestCs(Long marketId, Long intervalMs, Long openTime) {
+    public Candlestick getLatestCs(Long marketId, Long intervalMs) {
         String key = buildLatestKey(marketId, intervalMs);
         return redisTemplate.opsForValue().get(key);
     }

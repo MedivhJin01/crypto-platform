@@ -120,16 +120,18 @@ public class CsGetServiceImpl implements CsGetService {
     @Override
     public Map<String, Candlestick> getLatestCss(String symbol, Long intervalMs) {
         List<Market> markets = marketDataService.getMarketsBySymbol(symbol);
-        long openTime = (System.currentTimeMillis() / intervalMs) * intervalMs;
         return markets.stream()
-                .map(m -> Map.entry(
-                        m.getExchangeName(),
-                        redisService.getLatestCs(m.getId(), intervalMs, openTime)
-                ))
-                .filter(e -> e.getValue() != null)
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue
-                ));
+            .collect(Collectors.toMap(
+                Market::getExchangeName,
+                m -> {
+                    Candlestick cs = redisService.getLatestCs(
+                        m.getId(),
+                        intervalMs
+                    );
+                    return cs != null
+                        ? cs
+                        : Candlestick.empty(m.getId(), intervalMs);
+                }
+            ));
     }
 }

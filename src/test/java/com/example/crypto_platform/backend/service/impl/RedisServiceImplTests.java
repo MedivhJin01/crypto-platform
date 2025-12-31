@@ -74,7 +74,7 @@ public class RedisServiceImplTests {
 
         String expectedKey = "latest:1:60000";
         when(valueOperations.get(expectedKey)).thenReturn(expected);
-        Candlestick actual = redisServiceImpl.getLatestCs(marketId, intervalMs, 0L);
+        Candlestick actual = redisServiceImpl.getLatestCs(marketId, intervalMs);
         assertEquals(expected, actual);
         verify(valueOperations).get(expectedKey);
     }

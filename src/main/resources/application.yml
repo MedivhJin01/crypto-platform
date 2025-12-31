@@ -46,7 +46,7 @@ app:
 
 
 #  exchanges: ${APP_EXCHANGES:BINANCE,OKX,CRYPTO,BYBIT}
-  exchanges: ${APP_EXCHANGES:OKX, CRYPTO}
+  exchanges: ${APP_EXCHANGES:BINANCE}
   symbols: ${APP_SYMBOLS:BTC-USDT}
 
 # --- AI ---
@@ -65,6 +65,9 @@ ai:
       index: embedding
       max-result-ratio: 5
 
+# --- Port ---
+server:
+  port: 8081
 
 
 # --- Logging ---
