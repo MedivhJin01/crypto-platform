@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Latest Candlesticks</title>
+    <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+<div class="topbar">
+    <div class="topbarInner">
+        <div class="brand">
+            <div class="logo"></div>
+            <div class="brandText">
+                <div class="title">Crypto Platform</div>
+                <div class="sub">Live Crypto Data and News Analysis</div>
+            </div>
+        </div>
+
+        <!-- Keep the control position similar -->
+        <div class="controls">
+            <div class="field">
+                <div class="label">Symbol</div>
+                <div class="input">
+                    <select id="symbolSelect"></select>
+                    <span class="hint">1m</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="rightStatus">
+            <div class="badge" id="badge">
+                <span class="dot fetch" id="dot"></span>
+                <span id="statusText">Starting…</span>
+            </div>
+            <div class="meta" id="meta">poll: 30s</div>
+        </div>
+    </div>
+</div>
+
+<div class="wrap">
+
+    <!-- ===== Latest table ===== -->
+    <div class="panel">
+        <div class="panelHeader">
+            <div class="left">
+                <span class="chip" id="chipBase">backend: localhost</span>
+                <span class="chip" id="chipSym">symbol: BTC-USDT</span>
+            </div>
+            <div class="right" id="lastUpdated">—</div>
+        </div>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Exchange</th>
+                <th>Symbol</th>
+                <th>Open Time</th>
+                <th>Close Time</th>
+                <th class="num">O</th>
+                <th class="num">H</th>
+                <th class="num">L</th>
+                <th class="num">C</th>
+                <th class="num">V</th>
+            </tr>
+            </thead>
+            <tbody id="tbodyLatest"></tbody>
+        </table>
+
+        <div class="footerNote">
+            Tip: if an exchange returns empty candlestick, it will show “—”.
+        </div>
+    </div>
+
+    <!-- ===== Aggregated chart (under latest) ===== -->
+    <div class="panel">
+        <div class="panelHeader">
+            <div class="left">
+                <span class="chip">Aggregated Candlesticks</span>
+
+                <span class="chip" id="aggRangeChip">range: last 24h</span>
+
+                <span class="chip">
+            exchange:
+            <select id="exchangeSelect" style="margin-left:8px;background:transparent;border:0;color:inherit;outline:none;font-family:var(--mono);">
+            </select>
+          </span>
+
+                <span class="chip">
+            interval:
+            <select id="aggIntervalSelect" style="margin-left:8px;background:transparent;border:0;color:inherit;outline:none;font-family:var(--mono);">
+              <option value="1m">1m</option>
+              <option value="5m">5m</option>
+              <option value="10m" selected>10m</option>
+            </select>
+          </span>
+
+                <span class="chip" id="aggSymChip">symbol: BTC-USDT</span>
+            </div>
+
+            <div class="right" id="aggUpdated">—</div>
+        </div>
+
+        <div class="chartWrap">
+            <div class="chartBox" id="chart"></div>
+        </div>
+
+        <div class="footerNote">
+            Aggregated view uses /candlestick/get/aggregated with openTime=now-24h and closeTime=now.
+        </div>
+    </div>
+
+</div>
+
+<!-- Lightweight Charts v4 (stable addCandlestickSeries) -->
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+
+<script>
+    /* ===== CONFIG ===== */
+    const BASE_URL = "http://localhost:8081"; // change to your EC2 URL when needed
+    const LATEST_INTERVAL = "1m";
+    const POLL_MS = 30_000;
+
+    // Update this list to match your "available trading pairs"
+    const AVAILABLE_SYMBOLS = ["BTC-USDT", "ETH-USDT", "SOL-USDT"];
+
+    // Exchanges you support (dropdown)
+    const AVAILABLE_EXCHANGES = ["BINANCE", "OKX", "CRYPTO", "BYBIT"];
+
+    const tbodyLatest = document.getElementById("tbodyLatest");
+    const dot = document.getElementById("dot");
+    const statusText = document.getElementById("statusText");
+    const lastUpdated = document.getElementById("lastUpdated");
+    const chipBase = document.getElementById("chipBase");
+    const chipSym = document.getElementById("chipSym");
+    const symbolSelect = document.getElementById("symbolSelect");
+
+    const exchangeSelect = document.getElementById("exchangeSelect");
+    const aggIntervalSelect = document.getElementById("aggIntervalSelect");
+    const aggUpdated = document.getElementById("aggUpdated");
+    const aggSymChip = document.getElementById("aggSymChip");
+
+    // Latest data
+    const latestByExchange = new Map();
+
+    function setStatus(state, text) {
+        dot.className = "dot " + state; // ok / err / fetch
+        statusText.textContent = text;
+    }
+
+    function fmtTime(ms) {
+        if (ms == null) return "—";
+        return new Date(Number(ms)).toLocaleString();
+    }
+
+    function toNum(x) {
+        if (x == null) return null;
+        if (typeof x === "number") return x;
+        const n = Number(x);
+        return Number.isFinite(n) ? n : null;
+    }
+
+    function num(x, digits = 8) {
+        const n = toNum(x);
+        if (n == null) return "—";
+        return n.toLocaleString(undefined, { maximumFractionDigits: digits });
+    }
+
+    function isEmpty(c) {
+        return !c || c.openTime == null;
+    }
+
+    function populateSelect(select, options, defaultValue) {
+        select.innerHTML = "";
+        options.forEach(v => {
+            const opt = document.createElement("option");
+            opt.value = v;
+            opt.textContent = v;
+            select.appendChild(opt);
+        });
+        if (defaultValue && options.includes(defaultValue)) select.value = defaultValue;
+    }
+
+    /* ===== API calls ===== */
+    async function fetchLatest(symbol) {
+        const url = `${BASE_URL}/candlestick/get/latest/${encodeURIComponent(symbol)}/${encodeURIComponent(LATEST_INTERVAL)}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+            const t = await res.text().catch(() => "");
+            throw new Error(`Latest HTTP ${res.status}${t ? " — " + t : ""}`);
+        }
+        return res.json(); // { EXCHANGE: Candlestick, ... }
+    }
+
+    async function fetchAggregated({ exchange, symbol, interval, openTime, closeTime }) {
+        const qs = new URLSearchParams({
+            exchange,
+            symbol,
+            interval,
+            openTime: String(openTime),
+            closeTime: String(closeTime),
+        }).toString();
+
+        const url = `${BASE_URL}/candlestick/get/aggregated?${qs}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+            const t = await res.text().catch(() => "");
+            throw new Error(`Agg HTTP ${res.status}${t ? " — " + t : ""}`);
+        }
+        return res.json(); // Candlestick[]
+    }
+
+    /* ===== Render latest table ===== */
+    function renderLatest(symbol) {
+        tbodyLatest.innerHTML = "";
+
+        [...latestByExchange.entries()]
+            .sort(([a],[b]) => a.localeCompare(b))
+            .forEach(([exchange, c]) => {
+                const tr = document.createElement("tr");
+                const empty = isEmpty(c);
+
+                tr.innerHTML = `
+          <td><span class="pill"><span class="exDot"></span>${exchange}</span></td>
+          <td class="${empty ? "muted" : ""}">${symbol}</td>
+          <td class="${empty ? "muted" : ""}">${empty ? "—" : fmtTime(c.openTime)}</td>
+          <td class="${empty ? "muted" : ""}">${empty ? "—" : fmtTime(c.closeTime)}</td>
+          <td class="num ${empty ? "muted" : ""}">${empty ? "—" : num(c.openPrice, 8)}</td>
+          <td class="num ${empty ? "muted" : ""}">${empty ? "—" : num(c.highPrice, 8)}</td>
+          <td class="num ${empty ? "muted" : ""}">${empty ? "—" : num(c.lowPrice, 8)}</td>
+          <td class="num ${empty ? "muted" : ""}">${empty ? "—" : num(c.closePrice, 8)}</td>
+          <td class="num ${empty ? "muted" : ""}">${empty ? "—" : num(c.volume, 6)}</td>
+        `;
+                tbodyLatest.appendChild(tr);
+            });
+    }
+
+    /* ===== Aggregated chart setup ===== */
+    const chartEl = document.getElementById("chart");
+    const chart = LightweightCharts.createChart(chartEl, {
+        layout: {
+            background: { type: "solid", color: "rgba(2,6,23,0.00)" },
+            textColor: "rgba(229,231,235,0.85)",
+            fontFamily: getComputedStyle(document.documentElement).getPropertyValue("--sans").trim() || undefined,
+        },
+        grid: {
+            vertLines: { color: "rgba(148,163,184,0.10)" },
+            horzLines: { color: "rgba(148,163,184,0.10)" },
+        },
+        rightPriceScale: { borderColor: "rgba(148,163,184,0.14)" },
+        timeScale: { borderColor: "rgba(148,163,184,0.14)", timeVisible: true, secondsVisible: false },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    });
+
+    const candleSeries = chart.addCandlestickSeries({
+        upColor: "#22c55e",
+        downColor: "#ef4444",
+        borderDownColor: "#ef4444",
+        borderUpColor: "#22c55e",
+        wickDownColor: "#ef4444",
+        wickUpColor: "#22c55e",
+    });
+
+    // Resize chart
+    new ResizeObserver(() => {
+        chart.applyOptions({ width: chartEl.clientWidth, height: chartEl.clientHeight });
+    }).observe(chartEl);
+
+    function toChartCandle(cs) {
+        // Lightweight-charts expects seconds for `time`
+        const timeSec = Math.floor(Number(cs.openTime) / 1000);
+        const o = toNum(cs.openPrice), h = toNum(cs.highPrice), l = toNum(cs.lowPrice), c = toNum(cs.closePrice);
+        if ([timeSec,o,h,l,c].some(v => v == null)) return null;
+        return { time: timeSec, open: o, high: h, low: l, close: c };
+    }
+
+    async function tickLatest() {
+        const symbol = symbolSelect.value;
+
+        chipBase.textContent = `backend: ${BASE_URL.replace(/^https?:\/\//, "")}`;
+        chipSym.textContent = `symbol: ${symbol}`;
+
+        try {
+            setStatus("fetch", "Fetching…");
+            const data = await fetchLatest(symbol);
+
+            // Keep dropdown exchanges in sync with whatever backend returns
+            const keys = Object.keys(data);
+            if (keys.length) {
+                // only update dropdown if it has not been changed manually yet
+                const current = exchangeSelect.value || "BINANCE";
+                const union = Array.from(new Set([...keys, ...AVAILABLE_EXCHANGES])).sort();
+                populateSelect(exchangeSelect, union, union.includes(current) ? current : (keys[0] || "BINANCE"));
+            }
+
+            Object.entries(data).forEach(([ex, candle]) => latestByExchange.set(ex, candle));
+
+            renderLatest(symbol);
+            lastUpdated.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+            setStatus("ok", "Live");
+        } catch (e) {
+            setStatus("err", "Error");
+            lastUpdated.textContent = e.message;
+        }
+    }
+
+    async function tickAggregated() {
+        const symbol = symbolSelect.value;
+        const exchange = exchangeSelect.value;
+        const interval = aggIntervalSelect.value;
+
+        aggSymChip.textContent = `symbol: ${symbol}`;
+
+        const now = Date.now();
+        const openTime = now - 24 * 60 * 60 * 1000; // last 24h
+        const closeTime = now;
+
+        try {
+            aggUpdated.textContent = "Loading…";
+            const list = await fetchAggregated({ exchange, symbol, interval, openTime, closeTime });
+
+            // Convert, sort, setData
+            const chartData = (Array.isArray(list) ? list : [])
+                .map(toChartCandle)
+                .filter(Boolean)
+                .sort((a,b) => a.time - b.time);
+
+            candleSeries.setData(chartData);
+
+            aggUpdated.textContent = `Updated: ${new Date().toLocaleTimeString()} (${exchange} • ${interval} • 24h)`;
+            chart.timeScale().fitContent();
+        } catch (e) {
+            aggUpdated.textContent = e.message;
+            candleSeries.setData([]);
+        }
+    }
+
+    async function tickAll() {
+        await tickLatest();
+        await tickAggregated();
+    }
+
+    /* ===== Init UI ===== */
+    populateSelect(symbolSelect, AVAILABLE_SYMBOLS, "BTC-USDT");
+    populateSelect(exchangeSelect, AVAILABLE_EXCHANGES, "BINANCE");
+
+    symbolSelect.addEventListener("change", () => tickAll());
+    exchangeSelect.addEventListener("change", () => tickAggregated());
+    aggIntervalSelect.addEventListener("change", () => tickAggregated());
+
+    // Auto start
+    tickAll();
+    setInterval(tickAll, POLL_MS);
+</script>
+
+</body>
+</html>
