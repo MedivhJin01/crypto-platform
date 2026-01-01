@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,6 +36,27 @@ public class CsGetServiceImpl implements CsGetService {
         return v.stripTrailingZeros();
     }
 
+    private long anchorAggStartTime(long startTime) {
+        return Instant.ofEpochMilli(startTime)
+                .atZone(ZoneOffset.UTC)
+                .toLocalDate()
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+                .toEpochMilli();
+    }
+
+    private long ceilToBucket(long realOpenTime, long intervalMs) {
+        long anchorStartTime = anchorAggStartTime(realOpenTime);
+        long delta = realOpenTime - anchorStartTime;
+        if (delta <= 0) {
+            return anchorStartTime;
+        }
+        long q = delta / intervalMs;
+        long r = delta % intervalMs;
+        return anchorStartTime + (r == 0 ? q : (q + 1)) * intervalMs;
+    }
+
+
     private String buildLockKey(CsParam csParam) {
         return String.format(
                 "lock:agg:%d:%d:%d:%d",
@@ -43,10 +67,11 @@ public class CsGetServiceImpl implements CsGetService {
         );
     }
 
+
     private List<Candlestick> aggregateCss(CsParam csParam) {
         final long baseIntervalMs = intervalParseService.toMillis("1m");
         final long intervalMs = csParam.getIntervalMs();
-        final long startTime = csParam.getOpenTime();
+        final long alignedStartTime = ceilToBucket(csParam.getOpenTime(), intervalMs);
         CsParam baseCsParam = new CsParam(
                 csParam.getMarketId(),
                 baseIntervalMs,
@@ -54,14 +79,14 @@ public class CsGetServiceImpl implements CsGetService {
                 csParam.getExchange(),
                 csParam.getSymbol(),
                 "1m",
-                csParam.getOpenTime(),
+                alignedStartTime,
                 csParam.getCloseTime()
         );
 
         List<Candlestick> css = marketDataService.getMarketData(baseCsParam);
         Map<Long, List<Candlestick>> withBucket = css.stream()
                 .collect(Collectors.groupingBy(
-                        c -> (c.getOpenTime() - startTime) / intervalMs
+                        c -> (c.getOpenTime() - alignedStartTime) / intervalMs
                 ));
         return withBucket.entrySet().stream()
                 .unordered()

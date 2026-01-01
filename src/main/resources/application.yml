@@ -46,7 +46,7 @@ app:
 
 
 #  exchanges: ${APP_EXCHANGES:BINANCE,OKX,CRYPTO,BYBIT}
-  exchanges: ${APP_EXCHANGES:BINANCE}
+  exchanges: ${APP_EXCHANGES:BINANCE, OKX}
   symbols: ${APP_SYMBOLS:BTC-USDT}
 
 # --- AI ---
