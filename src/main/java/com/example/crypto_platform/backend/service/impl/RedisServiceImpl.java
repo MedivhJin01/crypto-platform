@@ -4,9 +4,10 @@ import com.example.crypto_platform.backend.dto.CsParam;
 import com.example.crypto_platform.backend.model.Candlestick;
 import com.example.crypto_platform.backend.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.DefaultTypedTuple;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
@@ -19,8 +20,14 @@ import java.util.stream.Collectors;
 @Service
 public class RedisServiceImpl implements RedisService {
 
-    @Autowired
-    private RedisTemplate<String, Candlestick> redisTemplate;
+    private final RedisTemplate<String, Candlestick> csRedisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
+
+    public RedisServiceImpl(@Qualifier("csRedisTemplate") RedisTemplate<String, Candlestick> csRedisTemplate,
+                            @Qualifier("stringRedisTemplate") StringRedisTemplate stringRedisTemplate) {
+        this.csRedisTemplate = csRedisTemplate;
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
 
     private String buildSeriesKey(long marketId, long intervalMs) {
         return String.format("series:%d:%d", marketId, intervalMs);
@@ -30,18 +37,22 @@ public class RedisServiceImpl implements RedisService {
         return String.format("latest:%d:%d", marketId, intervalMs);
     }
 
+    private String buildCooldownKey(long marketId, Long intervalMs) {
+        return String.format("cooldown:mkevent:%d:%d", marketId, intervalMs);
+    }
+
     @Override
     public void saveLatestCs(Candlestick candlestick) {
         long marketId = candlestick.getMarketId();
         long intervalMs = candlestick.getKlineInterval();
         String key = buildLatestKey(marketId, intervalMs);
-        redisTemplate.opsForValue().set(key, candlestick, 1, TimeUnit.MINUTES);
+        csRedisTemplate.opsForValue().set(key, candlestick, 2, TimeUnit.MINUTES);
     }
 
     @Override
     public Candlestick getLatestCs(Long marketId, Long intervalMs) {
         String key = buildLatestKey(marketId, intervalMs);
-        return redisTemplate.opsForValue().get(key);
+        return csRedisTemplate.opsForValue().get(key);
     }
 
     @Override
@@ -52,7 +63,7 @@ public class RedisServiceImpl implements RedisService {
         Set<ZSetOperations.TypedTuple<Candlestick>> tuples = candlesticks.stream()
                 .map(cs -> new DefaultTypedTuple<>( cs, (double) cs.getOpenTime()))
                 .collect(Collectors.toSet());
-        redisTemplate.opsForZSet().add(key, tuples);
+        csRedisTemplate.opsForZSet().add(key, tuples);
     }
 
     @Override
@@ -64,8 +75,16 @@ public class RedisServiceImpl implements RedisService {
 
         String key = buildSeriesKey(marketId, intervalMs);
 
-        return Objects.requireNonNull(redisTemplate.opsForZSet()
+        return Objects.requireNonNull(csRedisTemplate.opsForZSet()
                         .rangeByScore(key, startTime, endTime))
                 .stream().toList();
     }
+
+    @Override
+    public boolean tryAcquireMarketEventCooldown(Long marketId, Long intervalMs, long ttlSeconds) {
+        String key = buildCooldownKey(marketId, intervalMs);
+        Boolean ok = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", ttlSeconds, TimeUnit.SECONDS);
+        return Boolean.TRUE.equals(ok);
+    }
+
 }

@@ -1,6 +1,7 @@
 package com.example.crypto_platform.backend.config;
 
 import com.example.crypto_platform.backend.dto.CsBatch;
+import com.example.crypto_platform.contract.MarketEvent;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -34,12 +35,17 @@ public class KafkaConfig {
     }
 
     @Bean
-    public NewTopic topic(@Value("${app.kafka.cs-batch-topic:cs-batch-raw}") String name) {
+    public NewTopic csBatchTopic(@Value("${app.kafka.cs-batch-topic:cs-batch-raw}") String name) {
         return new NewTopic(name, 6, (short) 1);
     }
 
     @Bean
-    public ProducerFactory<String, CsBatch> producerFactory() {
+    public NewTopic marketEventTopic(@Value("${app.kafka.market-event-topic:market-event}") String name) {
+        return new NewTopic(name, 3, (short) 1);
+    }
+
+    @Bean
+    public ProducerFactory<String, CsBatch> csRawProducerFactory() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -50,14 +56,30 @@ public class KafkaConfig {
 
         return new DefaultKafkaProducerFactory<>(configProps);
     }
-
     @Bean
-    public KafkaTemplate<String, CsBatch> kafkaTemplate() {
-        return new KafkaTemplate<>(producerFactory());
+    public ProducerFactory<String, MarketEvent> marketEventProducerFactory() {
+        Map<String, Object> configProps = new HashMap<>();
+        configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
+        configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+
+        configProps.put(ProducerConfig.ACKS_CONFIG, "all");
+        configProps.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
+        return new DefaultKafkaProducerFactory<>(configProps);
+    }
+
+    @Bean(name = "csRawKafkaTemplate")
+    public KafkaTemplate<String, CsBatch> csRawKafkaTemplate() {
+        return new KafkaTemplate<>(csRawProducerFactory());
+    }
+
+    @Bean(name = "marketEventKafkaTemplate")
+    public KafkaTemplate<String, MarketEvent> marketEventKafkaTemplate() {
+        return new KafkaTemplate<>(marketEventProducerFactory());
     }
 
     @Bean
-    public ConsumerFactory<String, CsBatch> consumerFactory() {
+    public ConsumerFactory<String, CsBatch> csRawConsumerFactory() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
         configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
@@ -75,7 +97,7 @@ public class KafkaConfig {
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, CsBatch> kafkaBatchListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, CsBatch> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactory());
+        factory.setConsumerFactory(csRawConsumerFactory());
         factory.setBatchListener(true);
         factory.getContainerProperties().setPollTimeout(3000);
         return factory;

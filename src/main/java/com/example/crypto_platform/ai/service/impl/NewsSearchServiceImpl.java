@@ -1,6 +1,6 @@
 package com.example.crypto_platform.ai.service.impl;
 
-import com.example.crypto_platform.ai.dto.MarketEvent;
+import com.example.crypto_platform.contract.MarketEvent;
 import com.example.crypto_platform.ai.dto.TavilyResponse;
 import com.example.crypto_platform.ai.service.NewsSearchService;
 import dev.langchain4j.web.search.WebSearchEngine;

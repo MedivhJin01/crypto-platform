@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.*;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
@@ -25,8 +26,8 @@ public class RedisConfig implements CachingConfigurer {
         return new RedisCacheErrorHandler();
     }
 
-    @Bean
-    public RedisTemplate<String, Candlestick> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+    @Bean(name = "csRedisTemplate")
+    public RedisTemplate<String, Candlestick> csRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisSerializer<Object> serializer = redisSerializer();
         RedisTemplate<String, Candlestick> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
@@ -36,6 +37,11 @@ public class RedisConfig implements CachingConfigurer {
         redisTemplate.setHashValueSerializer(serializer);
         redisTemplate.afterPropertiesSet();
         return redisTemplate;
+    }
+
+    @Bean(name = "stringRedisTemplate")
+    public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        return new StringRedisTemplate(redisConnectionFactory);
     }
 
     @Bean

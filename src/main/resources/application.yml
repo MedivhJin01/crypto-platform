@@ -43,11 +43,24 @@ mybatis:
 app:
   kafka:
     cs-batch-topic: ${CS_BATCH_TOPIC:cs-batch-raw}
+    market-event-topic: ${MARKET_EVENT_TOPIC:market-event}
 
 
 #  exchanges: ${APP_EXCHANGES:BINANCE,OKX,CRYPTO,BYBIT}
   exchanges: ${APP_EXCHANGES:BINANCE, OKX}
   symbols: ${APP_SYMBOLS:BTC-USDT}
+
+  trigger:
+    defaults:
+      price-move: 0.002
+      volume-move: 10.00
+    per-symbol:
+      BTC-USDT:
+        price-move: 0.002
+        volume-move: 10.00
+      ETH-USDT:
+        price-move: 0.003
+        volume-move: 15.00
 
 # --- AI ---
 ai:

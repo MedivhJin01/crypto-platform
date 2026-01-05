@@ -1,21 +1,11 @@
 package com.example.crypto_platform.ai;
 
-import com.example.crypto_platform.ai.dto.MarketEvent;
-import com.example.crypto_platform.ai.dto.TavilyResponse;
 import com.example.crypto_platform.ai.service.LLMService;
 import com.example.crypto_platform.ai.service.NewsIngestionService;
 import com.example.crypto_platform.ai.service.NewsSearchService;
-import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 

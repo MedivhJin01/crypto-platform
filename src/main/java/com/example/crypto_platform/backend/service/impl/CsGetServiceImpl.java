@@ -7,6 +7,7 @@ import com.example.crypto_platform.backend.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -20,17 +21,22 @@ import java.util.stream.Collectors;
 @Service
 @Validated
 public class CsGetServiceImpl implements CsGetService {
-
-    @Autowired
-    private MarketDataService marketDataService;
-    @Autowired
-    private IntervalParseService intervalParseService;
-    @Autowired
-    private RedisService redisService;
-    @Autowired
-    private LockService lockService;
-
     private static final Logger log = LoggerFactory.getLogger(CsGetServiceImpl.class);
+
+    private final MarketDataService marketDataService;
+    private final IntervalParseService intervalParseService;
+    private final RedisService redisService;
+    private final LockService lockService;
+
+    public CsGetServiceImpl(MarketDataService marketDataService,
+                            IntervalParseService intervalParseService,
+                            RedisService redisService,
+                            LockService lockService) {
+        this.marketDataService = marketDataService;
+        this.intervalParseService = intervalParseService;
+        this.redisService = redisService;
+        this.lockService = lockService;
+    }
 
     private BigDecimal strip(BigDecimal v) {
         return v.stripTrailingZeros();
@@ -56,7 +62,6 @@ public class CsGetServiceImpl implements CsGetService {
         return anchorStartTime + (r == 0 ? q : (q + 1)) * intervalMs;
     }
 
-
     private String buildLockKey(CsParam csParam) {
         return String.format(
                 "lock:agg:%d:%d:%d:%d",
@@ -66,7 +71,6 @@ public class CsGetServiceImpl implements CsGetService {
                 csParam.getCloseTime()
         );
     }
-
 
     private List<Candlestick> aggregateCss(CsParam csParam) {
         final long baseIntervalMs = intervalParseService.toMillis("1m");
@@ -159,4 +163,5 @@ public class CsGetServiceImpl implements CsGetService {
                 }
             ));
     }
+
 }

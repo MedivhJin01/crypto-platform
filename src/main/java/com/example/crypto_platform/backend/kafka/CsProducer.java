@@ -7,6 +7,7 @@ import com.example.crypto_platform.backend.service.ExchangeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -20,15 +21,19 @@ public class CsProducer {
 
     private static final Logger log = LoggerFactory.getLogger(CsProducer.class);
 
-    @Autowired
-    private Map<String, ExchangeService> exchangeServices;
+    private final Map<String, ExchangeService> exchangeServices;
+    private final KafkaTemplate<String, CsBatch> csRawKafkaTemplate;
 
-    @Autowired
-    private KafkaTemplate<String, CsBatch> kafkaTemplate;
+    public CsProducer(Map<String, ExchangeService> exchangeServices,
+                      @Qualifier("csRawKafkaTemplate") KafkaTemplate<String, CsBatch> csRawKafkaTemplate) {
+        this.exchangeServices = exchangeServices;
+        this.csRawKafkaTemplate = csRawKafkaTemplate;
+    }
 
     @Value("${app.kafka.cs-batch-topic:cs-batch-raw}")
     private String csBatchTopic;
 
+    // may need flink later on for averaging cs prices
     public void produce(CsParam csParam){
         final ExchangeService exchangeService = exchangeServices.get(csParam.getExchange().toUpperCase());
         final long intervalMs = csParam.getIntervalMs();
@@ -58,7 +63,7 @@ public class CsProducer {
                     List<Candlestick> rows = exchangeService.fetchCsData(pageParam, httpParams);
 
                     CsBatch csBatch = new CsBatch(rows);
-                    kafkaTemplate.send(csBatchTopic, csBatch)
+                    csRawKafkaTemplate.send(csBatchTopic, csBatch)
                             .whenComplete((result, ex) -> {
                                 if (ex != null) {
                                     log.error("Failed to send Kafka batch: marketId = {}, exchange = {}, symbol = {}, startTime = {}, endTime = {}",

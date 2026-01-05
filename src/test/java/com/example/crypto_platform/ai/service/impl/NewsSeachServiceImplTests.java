@@ -1,6 +1,6 @@
 package com.example.crypto_platform.ai.service.impl;
 
-import com.example.crypto_platform.ai.dto.MarketEvent;
+import com.example.crypto_platform.contract.MarketEvent;
 import com.example.crypto_platform.ai.dto.TavilyResponse;
 import dev.langchain4j.web.search.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +15,6 @@ import java.net.URI;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
