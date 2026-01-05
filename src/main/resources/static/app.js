@@ -17,6 +17,9 @@ const exchangeSelect = document.getElementById("exchangeSelect");
 const aggSymbolSelect = document.getElementById("aggSymbolSelect");
 const intervalBar = document.getElementById("aggIntervalBar");
 
+// NEW: AI symbol selector (must exist in HTML)
+const aiSymbolSelect = document.getElementById("aiSymbolSelect");
+
 // init dropdowns
 function populateSelect(select, options, defaultValue) {
     if (!select) return;
@@ -34,6 +37,9 @@ function populateSelect(select, options, defaultValue) {
 populateSelect(symbolSelect, CONFIG.AVAILABLE_SYMBOLS, "BTC-USDT");
 populateSelect(aggSymbolSelect, CONFIG.AVAILABLE_SYMBOLS, "BTC-USDT");
 populateSelect(exchangeSelect, CONFIG.AVAILABLE_EXCHANGES, "BINANCE");
+
+// NEW: populate AI symbol dropdown with same options
+populateSelect(aiSymbolSelect, CONFIG.AVAILABLE_SYMBOLS, "BTC-USDT");
 
 // interval state (defaults to active button if present)
 let aggInterval = "1m";
@@ -80,7 +86,10 @@ async function tickAll() {
         const interval = aggInterval;
 
         await tickAggregated(CONFIG, { symbol: candleSymbol, exchange, interval });
-        await tickNews();
+
+        // NEW: AI news uses its own dropdown symbol; fallback to marketSymbol
+        const aiSymbol = aiSymbolSelect?.value || marketSymbol;
+        await tickNews(CONFIG, { symbol: aiSymbol });
     } catch (err) {
         // If something throws outside module catches, don't kill the loop silently.
         console.error("tickAll error:", err);
@@ -95,6 +104,9 @@ symbolSelect?.addEventListener("change", async () => {
 
 aggSymbolSelect?.addEventListener("change", () => tickAll());
 exchangeSelect?.addEventListener("change", () => tickAll());
+
+// NEW: AI dropdown change triggers refresh
+aiSymbolSelect?.addEventListener("change", () => tickAll());
 
 // auto start
 tickAll();

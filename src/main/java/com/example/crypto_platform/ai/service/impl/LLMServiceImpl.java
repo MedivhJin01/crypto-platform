@@ -158,4 +158,13 @@ public class LLMServiceImpl implements LLMService {
         }
         return summarizeFromHistory(marketEvent, newsHistories);
     }
+
+    @Override
+    public String reasoningDemo(MarketEvent marketEvent) {
+        return "Bitcoin recently slipped below the $87,000 level, marking a 2.3 % decline as broader crypto market volatility intensified. "
+                + "This drop was accompanied by roughly $200 million in leveraged long liquidations, especially affecting highly leveraged BTC positions, "
+                + "which contributed to downward pressure across major assets. Ethereum and several altcoins also experienced price softness, briefly "
+                + "dipping under key levels before stabilizing. Overall, the sell-off reflects thin liquidity and heightened market caution, with sentiment "
+                + "weakening as traders react to rapid losses and reduced confidence in near-term price direction.";
+    }
 }
