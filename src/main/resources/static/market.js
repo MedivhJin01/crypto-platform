@@ -1,6 +1,6 @@
 let latestByExchange = new Map();
 
-let tbodyLatest, dot, statusText, baseHostEl, latestUpdated;
+let tbodyLatest, dot, statusText, baseHostEl, latestUpdated, latestAvg;
 
 function setStatus(state, text) {
     if (!dot || !statusText) return;
@@ -40,6 +40,16 @@ async function fetchLatest(CONFIG, symbol) {
     return res.json();
 }
 
+async function fetchLatestAvg(CONFIG, symbol) {
+    const url = `${CONFIG.BASE_URL}/candlestick/get/latestAvg/${encodeURIComponent(symbol)}/${encodeURIComponent(CONFIG.LATEST_INTERVAL)}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`LatestAvg HTTP ${res.status}${t ? " — " + t : ""}`);
+    }
+    return res.json();
+}
+
 function renderLatest(symbol) {
     if (!tbodyLatest) return;
     tbodyLatest.innerHTML = "";
@@ -66,6 +76,24 @@ function renderLatest(symbol) {
       `;
             tbodyLatest.appendChild(tr);
         });
+    const avgEmpty = isEmpty(latestAvg);
+    const trAvg = document.createElement("tr");
+    trAvg.innerHTML = `
+        <td>
+          <span class="pill">
+            <span class="exDot ${avgEmpty ? "err" : "ok"}"></span>
+            average
+          </span>
+        </td>
+        <td class="${avgEmpty ? "muted" : ""}">${avgEmpty ? "—" : fmtTime(latestAvg.openTime)}</td>
+        <td class="${avgEmpty ? "muted" : ""}">${avgEmpty ? "—" : fmtTime(latestAvg.closeTime)}</td>
+        <td class="num ${avgEmpty ? "muted" : ""}">${avgEmpty ? "—" : num(latestAvg.openPrice, 8)}</td>
+        <td class="num ${avgEmpty ? "muted" : ""}">${avgEmpty ? "—" : num(latestAvg.highPrice, 8)}</td>
+        <td class="num ${avgEmpty ? "muted" : ""}">${avgEmpty ? "—" : num(latestAvg.lowPrice, 8)}</td>
+        <td class="num ${avgEmpty ? "muted" : ""}">${avgEmpty ? "—" : num(latestAvg.closePrice, 8)}</td>
+        <td class="num ${avgEmpty ? "muted" : ""}">${avgEmpty ? "—" : num(latestAvg.volume, 6)}</td>
+    `;
+    tbodyLatest.appendChild(trAvg);
 }
 
 export function initLatest() {
@@ -77,18 +105,37 @@ export function initLatest() {
 }
 
 export async function tickLatest(CONFIG, { symbol }) {
-    // Update backend host text without destroying chip layout
     if (baseHostEl) baseHostEl.textContent = CONFIG.BASE_URL.replace(/^https?:\/\//, "");
 
     try {
         setStatus("fetch", "Fetching…");
 
-        const data = await fetchLatest(CONFIG, symbol);
+        const [latestRes, avgRes] = await Promise.allSettled([
+            fetchLatest(CONFIG, symbol),
+            fetchLatestAvg(CONFIG, symbol),
+        ]);
+
+        if (latestRes.status === "rejected") {
+            throw latestRes.reason; // latest is required
+        }
+
+        // latest always renders
+        const data = latestRes.value;
         latestByExchange = new Map(Object.entries(data));
+
+        // avg is optional
+        if (avgRes.status === "fulfilled") {
+            latestAvg = avgRes.value;
+        } else {
+            console.warn("latestAvg failed:", avgRes.reason);
+            latestAvg = null; // render as empty row
+        }
 
         renderLatest(symbol);
 
-        if (latestUpdated) latestUpdated.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+        if (latestUpdated)
+            latestUpdated.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+
         setStatus("ok", "Live");
     } catch (e) {
         console.error("tickLatest error:", e);

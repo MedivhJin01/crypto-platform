@@ -62,6 +62,10 @@ public class CsGetServiceImpl implements CsGetService {
         return anchorStartTime + (r == 0 ? q : (q + 1)) * intervalMs;
     }
 
+    private String buildLatestAvgKey(String symbol, Long intervalMs) {
+        return String.format("%s:%d", symbol, intervalMs);
+    }
+
     private String buildLockKey(CsParam csParam) {
         return String.format(
                 "lock:agg:%d:%d:%d:%d",
@@ -162,6 +166,12 @@ public class CsGetServiceImpl implements CsGetService {
                         : Candlestick.empty(m.getId(), intervalMs);
                 }
             ));
+    }
+
+    @Override
+    public Candlestick getLatestAvgCs(String symbol, Long intervalMs) {
+        String key = buildLatestAvgKey(symbol, intervalMs);
+        return redisService.getLatestAvgCs(key);
     }
 
 }

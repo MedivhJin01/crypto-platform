@@ -41,4 +41,11 @@ public class CsController {
         return csGetService.getLatestCss(symbol, intervalMs);
     }
 
+    @GetMapping("/get/latestAvg/{symbol}/{interval}")
+    @ResponseStatus(HttpStatus.OK)
+    public Candlestick getLatestAvgCsBySymbol(@PathVariable String symbol, @PathVariable String interval){
+        long intervalMs = intervalParseService.toMillis(interval);
+        return csGetService.getLatestAvgCs(symbol, intervalMs);
+    }
+
 }

@@ -10,6 +10,8 @@ public interface CsGetService {
 
     List<Candlestick> getAggCss(CsParam csParam);
 
+    Candlestick getLatestAvgCs(String symbol, Long intervalMs);
+
     Map<String, Candlestick> getLatestCss(String symbol, Long intervalMs);
 
 }
