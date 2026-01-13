@@ -10,7 +10,6 @@ import com.example.crypto_platform.backend.service.RedisService;
 import com.example.crypto_platform.contract.MarketEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +18,9 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 public class CsConsumer {
@@ -31,22 +32,36 @@ public class CsConsumer {
     private final MarketDataService marketDataService;
     private final RedisService redisService;
     private final ThresholdConfig thresholdConfig;
+    private final MarketConfig marketConfig;
+    private final MkEventProducer mkEventProducer;
 
-    public CsConsumer(MarketDataService marketDataService, RedisService redisService, ThresholdConfig thresholdConfig) {
+
+    public CsConsumer(MarketDataService marketDataService,
+                      RedisService redisService,
+                      ThresholdConfig thresholdConfig,
+                      MarketConfig marketConfig,
+                      MkEventProducer mkEventProducer
+    ) {
         this.marketDataService = marketDataService;
         this.redisService = redisService;
         this.thresholdConfig = thresholdConfig;
+        this.marketConfig = marketConfig;
+        this.mkEventProducer = mkEventProducer;
     }
 
     private String buildKey(Candlestick candlestick) {
         return candlestick.getMarketId() + ":" + candlestick.getKlineInterval();
     }
 
-    private Candlestick avgLatestCs(Map<String, Candlestick> candlestickMap) {
-        if (candlestickMap == null || candlestickMap.isEmpty()) {
+    private String buildLatestAvgKey(String symbol, Long intervalMs) {
+        return symbol + ":" + intervalMs;
+    }
+
+    private Candlestick avgLatestCs(List<Candlestick> candlesticks) {
+        if (candlesticks == null || candlesticks.isEmpty()) {
             return null;
         }
-        List<Candlestick> css = candlestickMap.values().stream()
+        List<Candlestick> css = candlesticks.stream()
                 .filter(Objects::nonNull)
                 .toList();
 
@@ -94,6 +109,43 @@ public class CsConsumer {
                 avgClosePrice,
                 avgVolume
         );
+    }
+
+    private Map<String, Candlestick> avgLatestCsBySymbol(List<Candlestick> candlesticks) {
+        if (candlesticks == null || candlesticks.isEmpty()) {
+            return Map.of();
+        }
+        return marketConfig.getSymbols().stream()
+                .filter(Objects::nonNull)
+                .unordered()
+                .parallel()
+                .flatMap(symbol -> {
+                    Set<Long> marketIds = marketDataService.getMarketsBySymbol(symbol).stream()
+                            .map(Market::getId)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toSet());
+                    if  (marketIds.isEmpty()) {
+                        return Stream.empty();
+                    }
+                    return candlesticks.stream()
+                            .filter(Objects::nonNull)
+                            .filter(cs -> marketIds.contains(cs.getMarketId()))
+                            .collect(Collectors.groupingBy(Candlestick::getKlineInterval))
+                            .entrySet()
+                            .stream()
+                            .map(e -> {
+                                Candlestick avg = avgLatestCs(e.getValue());
+                                if (avg == null) return null;
+                                String key = buildLatestAvgKey(symbol, e.getKey());
+                                return Map.entry(key, avg);
+                            })
+                            .filter(Objects::nonNull);
+                })
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (a, b) -> a.getCloseTime() >= b.getCloseTime() ? a : b
+                ));
     }
 
     private MarketEvent triggerMarketEvent(String symbol, Candlestick prevCs, Candlestick tmpCs) {
@@ -145,7 +197,7 @@ public class CsConsumer {
                                 .flatMap(b -> b.getCss().stream())
                                 .toList();
 
-        Map<String, Candlestick> latestByKey = mergedCss.stream()
+        Map<String, Candlestick> latestCsByKey = mergedCss.stream()
                 .collect(Collectors.toMap(
                         this::buildKey,
                         cs -> cs,
@@ -154,9 +206,26 @@ public class CsConsumer {
 
         // need to figure out the marketId -> symbol issue, flink is a good way to aggregate and sink
         // implement this later
+        Map<String, Candlestick> avgLatestCsBySymbol = avgLatestCsBySymbol(latestCsByKey.values().stream().toList());
 
+        latestCsByKey.values().forEach(redisService::saveLatestCs);
+        avgLatestCsBySymbol.forEach((k,v) -> {
+            if (v == null) return;
 
-        latestByKey.values().forEach(redisService::saveLatestCs);
+            Candlestick prevAvgCs = redisService.getLatestAvgCs(k);
+            if (prevAvgCs != null) {
+                String symbol = k.split(":", 2)[0];
+                MarketEvent marketEvent = triggerMarketEvent(symbol, prevAvgCs, v);
+                if (marketEvent != null) {
+                    long ttlSeconds = 3600;
+                    boolean allowed = redisService.tryAcquireMarketEventCooldown(k, ttlSeconds);
+                    if (allowed) {
+                        mkEventProducer.produce(marketEvent);
+                    }
+                }
+            }
+            redisService.saveLatestAvgCs(k, v);
+        });
 
         marketDataService.insert(mergedCss);
         log.info("Consumer inserted Css: {}", mergedCss.size());

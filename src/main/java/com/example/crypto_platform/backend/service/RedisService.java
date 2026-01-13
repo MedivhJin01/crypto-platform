@@ -10,5 +10,7 @@ public interface RedisService {
     Candlestick getLatestCs(Long marketId, Long intervalMs);
     void saveAggCss(CsParam csParam, List<Candlestick> candlesticks);
     List<Candlestick> getAggCss(CsParam csParam);
-    boolean tryAcquireMarketEventCooldown(Long marketId, Long intervalMs, long ttlSeconds);
+    void saveLatestAvgCs(String symbol, Candlestick candlestick);
+    Candlestick getLatestAvgCs(String key);
+    boolean tryAcquireMarketEventCooldown(String key, long ttlSeconds);
 }

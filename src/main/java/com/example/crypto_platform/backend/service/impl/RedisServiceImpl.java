@@ -37,8 +37,12 @@ public class RedisServiceImpl implements RedisService {
         return String.format("latest:%d:%d", marketId, intervalMs);
     }
 
-    private String buildCooldownKey(long marketId, Long intervalMs) {
-        return String.format("cooldown:mkevent:%d:%d", marketId, intervalMs);
+    private String buildLatestAvgKey(String key) {
+        return String.format("latest:avg:%s", key);
+    }
+
+    private String buildCooldownKey(String key) {
+        return String.format("cooldown:mkevent:%s", key);
     }
 
     @Override
@@ -46,7 +50,7 @@ public class RedisServiceImpl implements RedisService {
         long marketId = candlestick.getMarketId();
         long intervalMs = candlestick.getKlineInterval();
         String key = buildLatestKey(marketId, intervalMs);
-        csRedisTemplate.opsForValue().set(key, candlestick, 2, TimeUnit.MINUTES);
+        csRedisTemplate.opsForValue().set(key, candlestick, intervalMs * 2, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -54,6 +58,20 @@ public class RedisServiceImpl implements RedisService {
         String key = buildLatestKey(marketId, intervalMs);
         return csRedisTemplate.opsForValue().get(key);
     }
+
+    @Override
+    public void saveLatestAvgCs(String key, Candlestick candlestick) {
+        long intervalMs = candlestick.getKlineInterval();
+        String k = buildLatestAvgKey(key);
+        csRedisTemplate.opsForValue().set(k, candlestick, intervalMs * 2, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public Candlestick getLatestAvgCs(String key) {
+        String k = buildLatestAvgKey(key);
+        return csRedisTemplate.opsForValue().get(k);
+    }
+
 
     @Override
     public void saveAggCss(CsParam csParam, List<Candlestick> candlesticks) {
@@ -81,9 +99,9 @@ public class RedisServiceImpl implements RedisService {
     }
 
     @Override
-    public boolean tryAcquireMarketEventCooldown(Long marketId, Long intervalMs, long ttlSeconds) {
-        String key = buildCooldownKey(marketId, intervalMs);
-        Boolean ok = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", ttlSeconds, TimeUnit.SECONDS);
+    public boolean tryAcquireMarketEventCooldown(String key, long ttlSeconds) {
+        String k = buildCooldownKey(key);
+        Boolean ok = stringRedisTemplate.opsForValue().setIfAbsent(k, "1", ttlSeconds, TimeUnit.SECONDS);
         return Boolean.TRUE.equals(ok);
     }
 
