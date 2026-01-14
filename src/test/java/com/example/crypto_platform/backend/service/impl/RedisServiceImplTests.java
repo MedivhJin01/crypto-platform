@@ -55,7 +55,7 @@ public class RedisServiceImplTests {
         redisServiceImpl.saveLatestCs(cs);
 
         String expectedKey = "latest:1:60000";
-        verify(valueOperations).set(eq(expectedKey), eq(cs), eq(2L), eq(TimeUnit.MINUTES));
+        verify(valueOperations).set(eq(expectedKey), eq(cs), eq(120000L), eq(TimeUnit.MILLISECONDS));
     }
 
     @Test

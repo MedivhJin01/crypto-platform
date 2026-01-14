@@ -88,7 +88,7 @@ public class CsConsumer {
     @KafkaListener(
             topics = "${app.kafka.cs-batch-topic:cs-batch-raw}",
             groupId = "cs-consumer-group",
-            containerFactory = "kafkaBatchListenerContainerFactory"
+            containerFactory = "csBatchListenerContainerFactory"
     )
     public void consume(List<CsBatch> csBatchList) {
         log.info("Consumer received CsBatchList: {}", csBatchList.size());

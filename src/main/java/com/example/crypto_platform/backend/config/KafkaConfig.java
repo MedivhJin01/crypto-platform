@@ -89,16 +89,42 @@ public class KafkaConfig {
         configProps.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 250);
 
         JsonDeserializer<CsBatch> jsonDeserializer = new JsonDeserializer<>(CsBatch.class);
+        jsonDeserializer.setUseTypeHeaders(false);
         jsonDeserializer.addTrustedPackages("*");
 
         return new DefaultKafkaConsumerFactory<>(configProps, new StringDeserializer(), jsonDeserializer);
     }
 
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, CsBatch> kafkaBatchListenerContainerFactory() {
+    @Bean(name = "csBatchListenerContainerFactory")
+    public ConcurrentKafkaListenerContainerFactory<String, CsBatch> csBatchListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, CsBatch> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(csRawConsumerFactory());
         factory.setBatchListener(true);
+        factory.getContainerProperties().setPollTimeout(3000);
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, MarketEvent> marketEventRawConsumerFactory() {
+        Map<String, Object> configProps = new HashMap<>();
+        configProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
+        configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        configProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+
+        JsonDeserializer<MarketEvent> jsonDeserializer = new JsonDeserializer<>(MarketEvent.class);
+        jsonDeserializer.addTrustedPackages("*");
+        jsonDeserializer.setUseTypeHeaders(false);
+
+        return new DefaultKafkaConsumerFactory<>(configProps, new StringDeserializer(), jsonDeserializer);
+    }
+
+    @Bean(name = "marketEventKafkaListenerContainerFactory")
+    public ConcurrentKafkaListenerContainerFactory<String, MarketEvent> marketEventKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, MarketEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(marketEventRawConsumerFactory());
         factory.getContainerProperties().setPollTimeout(3000);
         return factory;
     }
