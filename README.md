@@ -1,33 +1,127 @@
-# Read Me First
-The following was discovered as part of building this project:
+# Crypto-platform
 
-* The original package name 'com.example.crypto-platform' is invalid and this project uses 'com.example.crypto_platform' instead.
+Crypto-Platform is a scalable Spring Boot–based backend for real-time cryptocurrency market data ingestion and analysis.
+It standardizes OHLCV data from multiple exchanges, supports high-throughput aggregation and event detection via Kafka 
+and Redis. It also integrates a RAG pipeline where scraped news articles are stored in MongoDB and indexed as semantic 
+embeddings for reference and similarity searching, which enables LLMs to explain abnormal market movements. 
+Comprehensive unit and integration tests are included to ensure correctness and reliability, and a CI/CD pipeline is 
+implemented to automatically build, package, and deploy the application to AWS EC2 via Jenkins and Docker. The system 
+is designed for low-latency access, horizontal scalability, and extensibility toward quantitative trading and market 
+research applications.
 
-# Getting Started
+# Demo
+![UI.png](imgs/UI.png)
 
-### Reference Documentation
-For further reference, please consider the following sections:
+# Architecture
+![crypto-platform-design.png](imgs/crypto-platform-design.png)
 
-* [Official Apache Maven documentation](https://maven.apache.org/guides/index.html)
-* [Spring Boot Maven Plugin Reference Guide](https://docs.spring.io/spring-boot/3.5.6/maven-plugin)
-* [Create an OCI image](https://docs.spring.io/spring-boot/3.5.6/maven-plugin/build-image.html)
-* [Spring Web](https://docs.spring.io/spring-boot/3.5.6/reference/web/servlet.html)
-* [MyBatis Framework](https://mybatis.org/spring-boot-starter/mybatis-spring-boot-autoconfigure/)
-* [Spring Boot DevTools](https://docs.spring.io/spring-boot/3.5.6/reference/using/devtools.html)
+## Endpoints
 
-### Guides
-The following guides illustrate how to use some features concretely:
+### Backend:
+#### LatestAvgCandlesticks
+**GET** `/candlestick/get/latestAvg/{symbol}/{interval}`
 
-* [Building a RESTful Web Service](https://spring.io/guides/gs/rest-service/)
-* [Serving Web Content with Spring MVC](https://spring.io/guides/gs/serving-web-content/)
-* [Building REST services with Spring](https://spring.io/guides/tutorials/rest/)
-* [MyBatis Quick Start](https://github.com/mybatis/spring-boot-starter/wiki/Quick-Start)
-* [Accessing data with MySQL](https://spring.io/guides/gs/accessing-data-mysql/)
+Get the averaged OHLCV of the latest candlestick across exchanges for a symbol at a given interval.
 
-### Maven Parent overrides
+**Path params:**
+- `symbol` (e.g., BTC-USDT)
+- `interval` (e.g., 1m, 5m, 1h)
 
-Due to Maven's design, elements are inherited from the parent POM to the project POM.
-While most of the inheritance is fine, it also inherits unwanted elements like `<license>` and `<developers>` from the parent.
-To prevent this, the project POM contains empty overrides for these elements.
-If you manually switch to a different parent and actually want the inheritance, you need to remove those overrides.
+**Returns:** `Candlestick`
 
+#### LatestCandlesticks
+**GET** `/candlestick/get/latest/{symbol}/{interval}`
+
+Get the latest candlestick per exchange for a symbol at a given interval.
+
+**Path params:**
+- `symbol`
+- `interval`
+
+**Returns:** `Map<String, Candlestick>` (keyed by exchange, e.g., BINANCE, OKX, …)
+
+#### AggregateCandlesticks
+**GET** `/candlestick/get/aggregated`
+
+Get historical candlesticks aggregated to a coarser interval for a symbol from a specified exchange, within a time range.
+
+**Query params (via `CsRequest`):**
+- `exchange`
+- `symbol`
+- `interval`
+- `openTime`
+- `closeTime`
+- `limit`
+
+**Returns:** `List<Candlestick>`
+
+---
+
+### AI:
+
+#### ReasonMarketEvent
+**POST** `/ai/demo?symbol={symbol}`
+
+Runs a demo market-event reasoning flow: looks up stored news history (MongoDB) and asks the LLM to generate a summary.
+
+**Query params:**
+- `symbol` (e.g., BTC-USDT)
+
+**Returns:** `AiNewsResponse` (`symbol`, `summary`, `linksByTitle`, `timestamp`)
+
+## How to run the app
+### Step 1: Create .env
+Create a .env file under the project root directory.
+And configure your own api keys and connection credentials.
+
+```
+SPRING_DATASOURCE_URL=jdbc:mysql://<RDS_ENDPOINT>:3306/crypto_platform?useSSL=false&serverTimezone=UTC
+SPRING_DATASOURCE_USERNAME=<MYSQL_USERNAME>
+SPRING_DATASOURCE_PASSWORD=<MYSQL_PASSWORD>
+
+SPRING_DATA_MONGODB_URI=mongodb+srv://<USERNAME>:<PASSWORD>@<CLUSTER>.mongodb.net/crypto_platform
+
+GEMINI_API_KEY=<YOUR_GEMINI_API_KEY>
+TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
+```
+
+### Step 2: Install tools
+#### Option 1: Manually Download each Tool
+| Tool    | Version | Download                                                                         |
+|---------|---------|----------------------------------------------------------------------------------|
+| JDK     | 17      | https://download.oracle.com/java/17/archive/jdk-17.0.10_macos-aarch64_bin.tar.gz |
+| Kafka   | 4.1.1   | Homebrew: `brew install kafka`                                                   |
+| MySQL   | 8.0.42  | AWS RDS                                                                          |
+| Redis   | 8.4.0   | Homebrew: `brew install redis`                                                   |
+| MongoDB | 8.0.17  | MongoDB Atlas (managed cluster)                                                  |
+| Docker  | 29.1.2  | https://www.docker.com/products/docker-desktop/                                  |
+| Jenkins | 2.543   | Homebrew: `brew install jenkins` or Host Jenkins on AWS EC2                      |
+
+#### Option 2: Docker
+From the project root directory:
+`docker compose up -d`
+This starts required infrastructure services (e.g., Kafka, Redis) in detached mode.
+
+### Step 3: Run the App
+#### Option 1: Run with Maven
+`mvn clean spring-boot:run`
+
+#### Option 2: Package and Run as JAR
+```
+mvn clean package
+java -jar target/crypto-platform-0.0.1-SNAPSHOT.jar
+```
+
+### Step 4: Verify the Application
+- API available at:
+http://localhost:8081
+- Swagger UI:
+http://localhost:8081/swagger-ui.html
+![swagger-UI.png](imgs/swagger-UI.png)
+
+## Copyright
+
+© 2025–2026 **Haoning Jin**  
+All rights reserved.
+
+**Contact:** medivhjin@gmail.com
