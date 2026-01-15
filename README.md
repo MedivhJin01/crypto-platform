@@ -102,7 +102,18 @@ From the project root directory:
 `docker compose up -d`
 This starts required infrastructure services (e.g., Kafka, Redis) in detached mode.
 
-### Step 3: Run the App
+### Step 3: Initiate Database Schema
+The project includes a MySQL initialization script that creates the database schema
+and inserts required seed data.
+
+The SQL file is located at: crypto-platform/document/sql/crypto_platform.sql
+
+#### Run via MySQL CLI
+```bash
+   mysql -h <RDS_ENDPOINT> -P 3306 -u <MYSQL_USERNAME> -p < crypto-platform/document/sql/crypto_platform.sql
+```
+
+### Step 4: Run the App
 #### Option 1: Run with Maven
 `mvn clean spring-boot:run`
 
@@ -112,7 +123,7 @@ mvn clean package
 java -jar target/crypto-platform-0.0.1-SNAPSHOT.jar
 ```
 
-### Step 4: Verify the Application
+### Step 5: Verify the Application
 - API available at:
 http://localhost:8081
 - Swagger UI:
